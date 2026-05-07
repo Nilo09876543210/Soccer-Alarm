@@ -1,44 +1,59 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-st.set_page_config(page_title="Soccer 1v1 Pro", layout="centered")
+st.set_page_config(page_title="Bundesliga 1v1 Arena", layout="centered")
 
-st.title("⚽ Street Soccer: Pro Edition")
-st.markdown("### Steuerung: Spieler 1 (WASD) | Spieler 2 (Pfeiltasten)")
+st.title("⚽ Bundesliga 1v1: Nord-Süd-Gipfel")
 
 game_html = """
-<div id="container" style="display: flex; flex-direction: column; align-items: center; background: #333; padding: 20px; border-radius: 15px; color: white;">
-    <div id="scoreboard" style="font-family: 'Arial Black', sans-serif; font-size: 45px; margin-bottom: 10px;">
-        <span style="color: #3498db;">P1</span> 
-        <span id="score">0 : 0</span> 
-        <span style="color: #e74c3c;">P2</span>
+<div id="wrapper" style="display: flex; flex-direction: column; align-items: center; background: #111; padding: 25px; border-radius: 20px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: white; box-shadow: 0 10px 60px rgba(0,0,0,0.7);">
+    
+    <!-- Scoreboard -->
+    <div style="display: flex; align-items: center; justify-content: center; gap: 40px; margin-bottom: 10px;">
+        <div style="text-align: center;">
+            <div style="font-size: 24px; color: #3498db; font-weight: bold;">HSV</div>
+            <div id="p1-score" style="font-size: 50px; font-weight: 900;">0</div>
+        </div>
+        <div style="font-size: 30px; color: #555; margin-top: 20px;">VS</div>
+        <div style="text-align: center;">
+            <div style="font-size: 24px; color: #e74c3c; font-weight: bold;">FC BAYERN</div>
+            <div id="p2-score" style="font-size: 50px; font-weight: 900;">0</div>
+        </div>
     </div>
-    <div style="font-size: 18px; margin-bottom: 10px;">⏱ <span id="timer">120</span>s</div>
+
+    <!-- Timer & Status -->
+    <div style="background: rgba(255,255,255,0.1); padding: 5px 20px; border-radius: 50px; margin-bottom: 20px;">
+        <span style="color: #0f0;">⏱</span> <span id="timer" style="font-family: monospace; font-size: 20px;">120</span>s
+    </div>
     
-    <canvas id="gameCanvas" width="700" height="400" style="border:5px solid #555; background: #1a5e1a; cursor: none;"></canvas>
+    <canvas id="gameCanvas" width="700" height="400" style="border: 4px solid #444; border-radius: 10px; background: #2e7d32;"></canvas>
     
-    <p style="margin-top: 15px; color: #aaa;">Tipp: Die Latte ist massiv! Der Ball muss unten rein.</p>
+    <div style="margin-top: 20px; font-size: 13px; color: #777; text-align: center;">
+        <b>HSV:</b> WASD | <b>Bayern:</b> Pfeiltasten<br>
+        <span style="color: #aaa;">Klicke ins Feld, um die Steuerung zu aktivieren!</span>
+    </div>
 </div>
 
 <script>
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 const timerEl = document.getElementById("timer");
-const scoreEl = document.getElementById("score");
+const s1El = document.getElementById("p1-score");
+const s2El = document.getElementById("p2-score");
 
 let timeLeft = 120;
 let score1 = 0;
 let score2 = 0;
 let gameOver = false;
+let flashEffect = 0;
 
-const gravity = 0.4;
-const friction = 0.98;
+const gravity = 0.45;
 const keys = {};
 
-// Objekte
+// Spiel-Objekte
 const ball = { x: 350, y: 50, dx: 0, dy: 0, radius: 10 };
-const p1 = { startX: 60, startY: 350, x: 60, y: 350, w: 30, h: 50, dy: 0, jump: false, color: "#3498db" };
-const p2 = { startX: 610, startY: 350, x: 610, y: 350, w: 30, h: 50, dy: 0, jump: false, color: "#e74c3c" };
+const p1 = { startX: 70, startY: 350, x: 70, y: 350, w: 35, h: 50, dy: 0, jump: false, color: "#3498db", name: "HSV" };
+const p2 = { startX: 595, startY: 350, x: 595, y: 350, w: 35, h: 50, dy: 0, jump: false, color: "#e74c3c", name: "Bayern" };
 
 window.addEventListener("keydown", e => {
     keys[e.code] = true;
@@ -47,11 +62,10 @@ window.addEventListener("keydown", e => {
 window.addEventListener("keyup", e => keys[e.code] = false);
 
 function resetRound() {
-    // Spieler zurücksetzen
+    flashEffect = 15; // Kurzes Aufleuchten
     p1.x = p1.startX; p1.y = p1.startY; p1.dy = 0;
     p2.x = p2.startX; p2.y = p2.startY; p2.dy = 0;
-    // Ball in der Mitte von oben
-    ball.x = 350; ball.y = 20; ball.dx = 0; ball.dy = 0;
+    ball.x = 350; ball.y = 20; ball.dx = (Math.random()-0.5)*6; ball.dy = 0;
 }
 
 function checkCollision(p, b) {
@@ -65,15 +79,15 @@ function checkCollision(p, b) {
 function update() {
     if (gameOver) return;
 
-    // Bewegung P1 (Frei auf dem Feld)
-    if (keys['KeyA'] && p1.x > 0) p1.x -= 6;
-    if (keys['KeyD'] && p1.x < 670) p1.x += 6;
-    if (keys['KeyW'] && !p1.jump) { p1.dy = -11; p1.jump = true; }
+    // Steuerung HSV
+    if (keys['KeyA'] && p1.x > 0) p1.x -= 7;
+    if (keys['KeyD'] && p1.x < 665) p1.x += 7;
+    if (keys['KeyW'] && !p1.jump) { p1.dy = -12; p1.jump = true; }
 
-    // Bewegung P2 (Frei auf dem Feld)
-    if (keys['ArrowLeft'] && p2.x > 0) p2.x -= 6;
-    if (keys['ArrowRight'] && p2.x < 670) p2.x += 6;
-    if (keys['ArrowUp'] && !p2.jump) { p2.dy = -11; p2.jump = true; }
+    // Steuerung Bayern
+    if (keys['ArrowLeft'] && p2.x > 0) p2.x -= 7;
+    if (keys['ArrowRight'] && p2.x < 665) p2.x += 7;
+    if (keys['ArrowUp'] && !p2.jump) { p2.dy = -12; p2.jump = true; }
 
     // Physik Spieler
     [p1, p2].forEach(p => {
@@ -85,21 +99,21 @@ function update() {
     // Physik Ball
     ball.x += ball.dx;
     ball.y += ball.dy;
-    ball.dy += gravity * 0.6;
-    ball.dx *= 0.99; // Luftwiderstand
+    ball.dy += gravity * 0.7;
+    ball.dx *= 0.993; // Reibung
 
-    // Begrenzungen (Decke & Seitenwände)
+    // Kollision Decke & Wände
     if (ball.y < ball.radius) { ball.y = ball.radius; ball.dy *= -0.8; }
     if (ball.x < ball.radius || ball.x > 700 - ball.radius) { ball.dx *= -0.8; }
     if (ball.y > 390) { ball.y = 390; ball.dy *= -0.6; ball.dx *= 0.95; }
 
-    // Torlatten-Abpraller (Die Tore gehen bis Höhe 280)
-    // Wenn Ball gegen die Pfosten/Latte knallt (oben bei 280px)
-    if (ball.y < 285 && ball.y > 275) {
-        if (ball.x < 30 || ball.x > 670) { ball.dy *= -0.8; ball.y = 274; }
+    // Latten-Check (Ball darf nicht liegen bleiben)
+    if (ball.y > 270 && ball.y < 295) {
+        if (ball.x < 35) { ball.dy = -6; ball.dx = 5; } // Kick von linker Latte
+        if (ball.x > 665) { ball.dy = -6; ball.dx = -5; } // Kick von rechter Latte
     }
 
-    // Tor-Logik (Nur wenn unter der Latte und ganz am Rand)
+    // Tor-Abfrage
     if (ball.y > 280) {
         if (ball.x < 15) { score2++; resetRound(); }
         if (ball.x > 685) { score1++; resetRound(); }
@@ -108,42 +122,85 @@ function update() {
     // Spieler-Ball Kontakt
     [p1, p2].forEach(p => {
         if (checkCollision(p, ball)) {
-            ball.dy = -8;
-            ball.dx = (ball.x - (p.x + p.w/2)) * 0.7;
+            ball.dy = -10;
+            ball.dx = (ball.x - (p.x + p.w/2)) * 0.9;
         }
     });
 
+    if (flashEffect > 0) flashEffect--;
     draw();
     requestAnimationFrame(update);
 }
 
 function draw() {
-    ctx.clearRect(0, 0, 700, 400);
+    // 1. Hintergrund (Himmel & Tribüne)
+    ctx.fillStyle = "#16213e";
+    ctx.fillRect(0, 0, 700, 400);
+    
+    // Flutlicht-Strahlen
+    ctx.fillStyle = "rgba(255,255,255,0.05)";
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(150,0); ctx.lineTo(350,400); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(700,0); ctx.lineTo(550,0); ctx.lineTo(350,400); ctx.fill();
 
-    // Feldmarkierungen
-    ctx.strokeStyle = "rgba(255,255,255,0.2)";
-    ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.arc(350, 200, 50, 0, Math.PI*2); ctx.stroke();
-    ctx.moveTo(350, 0); ctx.lineTo(350, 400); ctx.stroke();
+    // Tribünen-Punkte (Fans)
+    for(let i=0; i<700; i+=25) {
+        for(let j=30; j<250; j+=35) {
+            ctx.fillStyle = Math.random() > 0.5 ? "#333" : "#444";
+            ctx.fillRect(i, j, 15, 10);
+        }
+    }
 
-    // Tore (Gehäuse)
-    ctx.fillStyle = "#fff";
-    ctx.fillRect(0, 280, 5, 120); // Pfosten links
-    ctx.fillRect(0, 280, 25, 5);   // Latte links
-    ctx.fillRect(695, 280, 5, 120); // Pfosten rechts
-    ctx.fillRect(675, 280, 25, 5);  // Latte rechts
+    // 2. Rasen
+    ctx.fillStyle = "#2e7d32";
+    ctx.fillRect(0, 250, 700, 150);
+    
+    // Spielfeld-Linien
+    ctx.strokeStyle = "rgba(255,255,255,0.4)";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(10, 250, 680, 145);
+    ctx.beginPath(); ctx.moveTo(350, 250); ctx.lineTo(350, 400); ctx.stroke();
+    ctx.beginPath(); ctx.arc(350, 325, 40, 0, Math.PI*2); ctx.stroke();
 
-    // Spieler
-    ctx.fillStyle = p1.color; ctx.fillRect(p1.x, p1.y, p1.w, p1.h);
-    ctx.fillStyle = p2.color; ctx.fillRect(p2.x, p2.y, p2.w, p2.h);
+    // 3. Tore
+    ctx.strokeStyle = "white";
+    ctx.lineWidth = 5;
+    ctx.strokeRect(-5, 280, 25, 120); // Tor links
+    ctx.strokeRect(680, 280, 25, 120); // Tor rechts
 
-    // Ball
-    ctx.fillStyle = "#fff";
-    ctx.beginPath();
-    ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI*2);
-    ctx.fill();
+    // 4. Spieler (mit Trikot-Details)
+    [p1, p2].forEach(p => {
+        // Schatten
+        ctx.fillStyle = "rgba(0,0,0,0.3)";
+        ctx.beginPath(); ctx.ellipse(p.x+p.w/2, 395, 20, 5, 0, 0, Math.PI*2); ctx.fill();
+        
+        // Körper
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x, p.y, p.w, p.h);
+        // Kopf
+        ctx.fillStyle = "#ffdbac";
+        ctx.fillRect(p.x + 5, p.y - 18, 25, 18);
+        // Augen
+        ctx.fillStyle = "black";
+        ctx.fillRect(p.x + 8, p.y - 12, 4, 4);
+        ctx.fillRect(p.x + 22, p.y - 12, 4, 4);
+    });
 
-    scoreEl.innerText = score1 + " : " + score2;
+    // 5. Ball (Fußball-Look)
+    ctx.save();
+    ctx.translate(ball.x, ball.y);
+    ctx.fillStyle = "white";
+    ctx.beginPath(); ctx.arc(0, 0, ball.radius, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = "black"; ctx.lineWidth = 1; ctx.stroke();
+    ctx.restore();
+
+    // Tor-Flash-Effekt
+    if (flashEffect > 0) {
+        ctx.fillStyle = `rgba(255,255,255,${flashEffect/20})`;
+        ctx.fillRect(0,0,700,400);
+    }
+
+    s1El.innerText = score1;
+    s2El.innerText = score2;
 }
 
 const gameTimer = setInterval(() => {
@@ -153,7 +210,7 @@ const gameTimer = setInterval(() => {
     } else {
         gameOver = true;
         clearInterval(gameTimer);
-        alert("SPIEL ENDE! " + score1 + ":" + score2);
+        alert("SCHLUSSPFIFF! Endstand HSV " + score1 + " : " + score2 + " FC Bayern");
         location.reload();
     }
 }, 1000);
@@ -162,4 +219,4 @@ update();
 </script>
 """
 
-components.html(game_html, height=600)
+components.html(game_html, height=650)
